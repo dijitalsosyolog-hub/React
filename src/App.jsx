@@ -1,52 +1,27 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-// Yaparak öğren serisi — Proje 1: Mini Görev Uygulaması
-// Kavramlar: useState, controlled input, list render, conditional class, localStorage, küçük bileşenler
+// Yaparak öğren serisi — Proje 2: Filtreler & Bileşen Props
+// Kavramlar: props ile parçalama, türetilmiş state (useMemo), filtre sekmeleri, toplu işlemler
 
 function Icon({ name, className = "w-5 h-5" }) {
   const paths = {
     sun: (
-      <path
-        stroke="currentColor"
-        strokeWidth="1.5"
-        d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.657-6.343 1.414-1.414M4.93 19.071l1.414-1.414m0-10.314L4.93 4.93m13.142 13.142-1.414-1.414M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z"
-        fill="none"
-      />
+      <path stroke="currentColor" strokeWidth="1.5" d="M12 4V2m0 20v-2m8-8h2M2 12h2m13.657-6.343 1.414-1.414M4.93 19.071l1.414-1.414m0-10.314L4.93 4.93m13.142 13.142-1.414-1.414M12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z" fill="none" />
     ),
     moon: (
-      <path
-        stroke="currentColor"
-        strokeWidth="1.5"
-        d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"
-        fill="none"
-      />
+      <path stroke="currentColor" strokeWidth="1.5" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" fill="none" />
     ),
-    plus: (
-      <path
-        stroke="currentColor"
-        strokeWidth="1.5"
-        d="M12 5v14m7-7H5"
-        fill="none"
-      />
-    ),
+    plus: <path stroke="currentColor" strokeWidth="1.5" d="M12 5v14m7-7H5" fill="none" />,
     trash: (
-      <path
-        stroke="currentColor"
-        strokeWidth="1.5"
-        d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m3 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0h10"
-        fill="none"
-      />
+      <path stroke="currentColor" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m3 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0h10" fill="none" />
     ),
-    check: (
-      <path
-        stroke="currentColor"
-        strokeWidth="1.5"
-        d="M5 13l4 4L19 7"
-        fill="none"
-      />
+    check: <path stroke="currentColor" strokeWidth="1.5" d="M5 13l4 4L19 7" fill="none" />,
+    minus: <path stroke="currentColor" strokeWidth="1.5" d="M5 12h14" fill="none" />,
+    filter: (
+      <path stroke="currentColor" strokeWidth="1.5" d="M3 5h18M6 12h12M10 19h4" fill="none" />
     ),
-    minus: (
-      <path stroke="currentColor" strokeWidth="1.5" d="M5 12h14" fill="none" />
+    refresh: (
+      <path stroke="currentColor" strokeWidth="1.5" d="M4 4v6h6M20 20v-6h-6M20 10A8 8 0 1 0 9.17 3.17M4 14A8 8 0 0 0 14.83 20" fill="none" />
     ),
   };
   return (
@@ -56,11 +31,12 @@ function Icon({ name, className = "w-5 h-5" }) {
   );
 }
 
-function Button({ onClick, children, type = "button", className = "" }) {
+function Button({ onClick, children, type = "button", className = "", title }) {
   return (
     <button
       type={type}
       onClick={onClick}
+      title={title}
       className={
         "px-3 py-2 rounded-2xl shadow text-sm font-medium transition active:scale-[.98] " +
         "bg-gray-900 text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 " +
@@ -119,11 +95,66 @@ function TaskItem({ task, onToggle, onRemove }) {
   );
 }
 
+function StatsBar({ total, done }) {
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs mb-2 opacity-70">
+        <span>Toplam: {total} • Tamamlanan: {done} • Bekleyen: {total - done}</span>
+        <span>%{pct} tamamlandı</span>
+      </div>
+      <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+        <div className="h-full bg-gray-900 dark:bg-white" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function FilterTabs({ value, onChange, counts }) {
+  const tabs = [
+    { id: "all", label: `Tümü (${counts.all})` },
+    { id: "active", label: `Aktif (${counts.active})` },
+    { id: "done", label: `Tamamlanan (${counts.done})` },
+  ];
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <span className="inline-flex items-center gap-1 opacity-70"><Icon name="filter" />Filtre:</span>
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => onChange(t.id)}
+          className={`px-3 py-1.5 rounded-xl border transition ${
+            value === t.id
+              ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+              : "hover:bg-gray-100 dark:hover:bg-gray-800"
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TaskList({ tasks, onToggle, onRemove }) {
+  if (tasks.length === 0) {
+    return <p className="text-sm opacity-60">Bu filtrede görev yok.</p>;
+  }
+  return (
+    <ul className="space-y-2">
+      {tasks.map((task) => (
+        <TaskItem key={task.id} task={task} onToggle={onToggle} onRemove={onRemove} />
+      ))}
+    </ul>
+  );
+}
+
 export default function App() {
   const [dark, setDark] = useState(true);
   const theme = dark ? "dark bg-gray-950 text-gray-100" : "bg-gray-50 text-gray-900";
 
   const [text, setText] = useState("");
+  const [filter, setFilter] = useState("all"); // all | active | done
   const [tasks, setTasks] = useState(() => {
     try {
       const raw = localStorage.getItem("rbdo_tasks_v1");
@@ -137,18 +168,23 @@ export default function App() {
     localStorage.setItem("rbdo_tasks_v1", JSON.stringify(tasks));
   }, [tasks]);
 
-  const stats = useMemo(() => {
+  const counts = useMemo(() => {
     const total = tasks.length;
     const done = tasks.filter((t) => t.done).length;
-    const todo = total - done;
-    const pct = total ? Math.round((done / total) * 100) : 0;
-    return { total, done, todo, pct };
+    const active = total - done;
+    return { total, done, active, all: total };
   }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    if (filter === "active") return tasks.filter((t) => !t.done);
+    if (filter === "done") return tasks.filter((t) => t.done);
+    return tasks;
+  }, [tasks, filter]);
 
   function addTask(e) {
     e.preventDefault();
     const value = text.trim();
-    if (!value) return;
+    if (value.length < 3) return; // basit doğrulama
     const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
     setTasks((prev) => [{ id, text: value, done: false }, ...prev]);
     setText("");
@@ -162,13 +198,22 @@ export default function App() {
     setTasks((prev) => prev.filter((t) => t.id !== id));
   }
 
+  function clearCompleted() {
+    setTasks((prev) => prev.filter((t) => !t.done));
+  }
+
+  function toggleAll() {
+    const allDone = tasks.length > 0 && tasks.every((t) => t.done);
+    setTasks((prev) => prev.map((t) => ({ ...t, done: !allDone })));
+  }
+
   return (
     <div className={"min-h-screen transition-colors " + theme}>
       <div className="max-w-2xl mx-auto p-6">
         <header className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">React — Yaparak Öğren • Proje 1</h1>
-            <p className="text-sm opacity-70">Mini Görev Uygulaması (useState • list • localStorage)</p>
+            <h1 className="text-2xl font-bold">React — Yaparak Öğren • Proje 2</h1>
+            <p className="text-sm opacity-70">Filtreler & Props (Tümü / Aktif / Tamamlanan)</p>
           </div>
           <Button onClick={() => setDark((d) => !d)} className="!bg-transparent !text-current !shadow-none border">
             <span className="inline-flex items-center gap-2">
@@ -179,61 +224,58 @@ export default function App() {
         </header>
 
         <main className="space-y-6">
-          {/* Sayaç bileşeni: temel state ve event handling */}
+          {/* Sayaç bileşeni: tekrar */}
           <Counter />
 
-          {/* Ekleme formu + liste */}
-          <section className="p-4 rounded-2xl border bg-white/80 dark:bg-gray-900/60 backdrop-blur">
+          {/* Add + Actions + Filters */}
+          <section className="p-4 rounded-2xl border bg-white/80 dark:bg-gray-900/60 backdrop-blur space-y-4">
             <form onSubmit={addTask} className="flex items-center gap-2">
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Görev ekle (örn: React useState öğren)"
-                className="flex-1 px-3 py-2 rounded-xl border bg-white/80 dark:bg-gray-950/80"
+                placeholder="Görev ekle (min 3 karakter)"
+                className={`flex-1 px-3 py-2 rounded-xl border bg-white/80 dark:bg-gray-950/80 ${
+                  text.trim().length > 0 && text.trim().length < 3 ? "border-red-400" : ""
+                }`}
               />
               <Button type="submit">
                 <span className="inline-flex items-center gap-1"><Icon name="plus"/>Ekle</span>
               </Button>
             </form>
 
-            <div className="mt-4">
-              <div className="flex items-center justify-between text-xs mb-2 opacity-70">
-                <span>Toplam: {stats.total} • Tamamlanan: {stats.done} • Bekleyen: {stats.todo}</span>
-                <span>%{stats.pct} tamamlandı</span>
-              </div>
-              <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gray-900 dark:bg-white"
-                  style={{ width: `${stats.pct}%` }}
-                />
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <StatsBar total={counts.total} done={counts.done} />
+            </div>
+
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <FilterTabs value={filter} onChange={setFilter} counts={counts} />
+              <div className="flex items-center gap-2 ml-auto">
+                <Button onClick={toggleAll} title="Hepsini tamamla / geri al">
+                  <span className="inline-flex items-center gap-1"><Icon name="check"/>Tümü</span>
+                </Button>
+                <Button onClick={clearCompleted} title="Tamamlananları temizle" className="bg-red-600 hover:bg-red-500 dark:bg-red-500 dark:hover:bg-red-400">
+                  <span className="inline-flex items-center gap-1"><Icon name="trash"/>Temizle</span>
+                </Button>
               </div>
             </div>
 
-            <ul className="mt-4 space-y-2">
-              {tasks.length === 0 && (
-                <p className="text-sm opacity-60">Henüz görev yok. Yukarıdan ilkini ekle ✨</p>
-              )}
-              {tasks.map((task) => (
-                <TaskItem key={task.id} task={task} onToggle={toggleTask} onRemove={removeTask} />
-              ))}
-            </ul>
+            <TaskList tasks={filteredTasks} onToggle={toggleTask} onRemove={removeTask} />
           </section>
 
-          {/* Küçük bir alıştırma notu */}
-          <section className="text-sm opacity-80">
-            <p className="mb-1 font-medium">Ödev (5–15 dk):</p>
-            <ol className="list-decimal ml-5 space-y-1">
-              <li>"Enter" ile ekle; input boşsa eklemeyi engelle (zaten var 🙂).</li>
-              <li>Alt+Enter ile hemen "tamamlandı" olarak ekleme kısayolu ekle.</li>
-              <li>"Tamamlananları temizle" butonu ekle.</li>
-              <li>"Hepsini tamamla" / "Hepsini geri al" tuşu ekle.</li>
-              <li>Input’a min 3 karakter kuralı koy ve kullanıcıya görsel geri bildirim ver.</li>
-            </ol>
+          {/* Notlar */}
+          <section className="text-sm opacity-80 space-y-2">
+            <p className="font-medium">Bu derste öğrendiklerimiz</p>
+            <ul className="list-disc ml-5 space-y-1">
+              <li><b>Props</b> ile bileşenleri parçalama (TaskItem, FilterTabs, StatsBar, TaskList).</li>
+              <li><b>useMemo</b> ile türetilmiş state: sayılar ve filtrelenmiş liste.</li>
+              <li>Toplu aksiyonlar: <i>Tümü</i> ve <i>Tamamlananları temizle</i>.</li>
+              <li>Küçük form doğrulaması ve görsel geri bildirim.</li>
+            </ul>
           </section>
         </main>
 
         <footer className="mt-10 text-xs opacity-60">
-          <p>Sonraki derste: component props, reuse ve basit filtreleme ("Tümü / Aktif / Tamamlanan").</p>
+          <p>Sonraki derste: <b>custom hook</b> (useLocalStorage) ve küçük refactor.</p>
         </footer>
       </div>
     </div>
